@@ -2,43 +2,57 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Overview
+## Purpose
 
-This is a single-file Streamlit application (`app.py`) that visualizes a monthly spending burndown chart. It compares a planned budget path against actual spending, derived from historical transaction data and user-configured fixed costs.
+Personal financial portfolio dashboard for a South African user. Tracks investment accounts, net worth history (Jun 2020 → present), monthly expenses, and models retirement scenarios. Key feature: import any bank/investment CSV and present it in a clean, consumable UI.
 
 ## Running the App
 
-Install dependencies first (no requirements.txt exists yet — install manually):
-
 ```bash
-pip install streamlit pandas plotly
-```
-
-Run the app:
-
-```bash
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
-There are no tests, linting configs, or build steps currently defined.
+No build step, no test suite, no linting config currently defined.
 
 ## Architecture
 
-The entire application lives in `app.py` and follows a top-to-bottom Streamlit execution model — the file is re-executed on every user interaction.
+The entire application is a single file (`app.py`) divided into five Streamlit tabs. Streamlit re-executes the file top-to-bottom on every user interaction, so all mutable state lives in `st.session_state`.
 
-**Data flow:**
+**Execution order within `app.py`:**
+1. **Seed data constants** — `CURRENT_ACCOUNTS`, `HISTORY_ROWS`, `DEFAULT_EXPENSES` define the starting dataset (actual figures from the owner's statements).
+2. **Helper functions** — `zar()` (ZAR formatting), `calc_lump_sum_tax()` (SARS lump sum table), `home_loan_repayment()` (amortisation formula).
+3. **Session state initialisation** — run once per browser session; converts seed data into editable DataFrames stored in `st.session_state`.
+4. **Five tabs** rendered in order: Dashboard → Performance History → Import CSV → Expenses → Retirement Planner.
 
-1. **Session state** (`st.session_state.history`) holds mock historical transactions as a DataFrame. In a production version this would come from a CSV upload or API.
-2. **Sidebar inputs** collect `payday_val`, `safety_net`, and a `fixed_data` DataFrame of recurring fixed costs (name, amount, day-of-month).
-3. **`calculate_velocity(df)`** computes per-category daily spending rate from historical data. The sum becomes `daily_planned_burn`.
-4. **Planned burndown** iterates over each day of the current month, deducting fixed costs on their scheduled day and `daily_planned_burn` daily.
-5. **Actual burndown** does the same but multiplies variable burn by 1.1 (currently a hardcoded simulation — a real implementation would use actual transaction data).
-6. **Plotly figure** renders both lines plus an orange safety-net threshold line.
-7. **Metrics row** shows daily variable budget, over/under budget status, and per-category burn rates.
+**State keys and their types:**
+
+| Key | Type | Description |
+|---|---|---|
+| `accounts` | DataFrame | Current balances: Account, Balance, Type |
+| `history` | DataFrame | Monthly net worth rows: Date, Closing Balance, Increase/Decrease, Less Contribution, Growth % |
+| `transactions` | DataFrame | CSV-imported rows: Date, Description, Amount, Category |
+| `expenses` | DataFrame | Fixed monthly costs: Category, Monthly |
+
+**Data relationships:**
+- `history` rows reflect the *combined* portfolio (all accounts summed). The `Closing Balance` of the last row should equal `accounts["Balance"].sum()` — these are kept in sync by editing them independently.
+- `Less Contribution` = `Increase/Decrease` minus the monthly contribution (R28,761.90). This isolates pure investment return from new money added.
+- The Retirement Planner reads `expenses` to calculate discretionary spend; debt repayments (Home Loan, RCP, ABSA CC) are computed dynamically based on user inputs and excluded from the expense editor total to avoid double-counting.
 
 ## Key Conventions
 
-- All state that must persist across reruns must go into `st.session_state`.
-- Fixed costs use day-of-month matching (`fixed_data[fixed_data['Day'] == d]`) — entries with no matching day are simply not deducted.
-- The actual spending path is only computed up to `today.day`, while planned covers the full month.
-- `calculate_velocity` returns a Series (per-category), not a scalar — callers use `.sum()` to get total daily burn.
+- All monetary amounts are South African Rand (ZAR). Use `zar(value)` for display — it handles negative values with a leading minus before `R`.
+- Dates in the history table are end-of-month. The CSV importer passes `dayfirst=True` to `pd.to_datetime` to handle South African DD/MM/YYYY formats.
+- CSV amounts are cleaned with `str.replace(r"[R,\s]", "", regex=True)` before numeric conversion to handle formatted bank exports.
+- The SARS lump sum tax function takes `(withdrawal, previous_withdrawals)` — it computes marginal tax by differencing cumulative tax, not by taxing the withdrawal amount in isolation.
+- Home loan repayment uses a standard amortisation formula at 8.88% p.a. over 180 months (15 years). The outstanding balance in seed data is R1,230,588.96.
+- The Retirement Planner tab never mutates `st.session_state` — all output is computed inline from widget inputs.
+
+## Accounts in Seed Data
+
+| Account | Type | Balance (31-Mar-26) |
+|---|---|---|
+| Sanlam Provident | Retirement | R3,727,008.00 |
+| 10X LA | Retirement | R2,721,626.20 |
+| RSA Retail Savings | Savings | R19,000.00 |
+| EasyEquities | Equity | R16,645.68 |
