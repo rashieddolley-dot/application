@@ -1,3 +1,18 @@
+# Smart Burndown (app.py)
+
+A Streamlit budget dashboard that plots your planned vs. actual monthly spending burndown.
+
+## Run it (any machine, including Android via Termux)
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Streamlit prints a `http://localhost:8501` link — open it in a browser. On Android/Termux, open that link in your phone's regular browser app (Termux itself has no browser).
+
+---
+
 # Reverse Engineer
 
 `reverse_engineer.py` reads Python source code and produces a Markdown outline you can turn straight into diagrams — no manual note-taking required.
