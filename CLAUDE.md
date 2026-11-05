@@ -29,3 +29,7 @@ Note: the planned path is clamped at 0 but the actual path is not, so the two ca
 A separate, fully offline single-file app (no Streamlit, no network; a CSP blocks all requests). Vanilla JS in one `<script>`, state persisted to `localStorage` (key `spendtruth.v1`) plus optional linked file / JSON backup. Open it directly in a browser; add `?today=YYYY-MM-DD` to fake the date when testing.
 
 Flow: CSV import → `classify()` (user rules → learned merchant key → naive Bayes on user-confirmed txns → built-in keyword seeds) → `analyse()` builds pay-cycle (payday-to-payday) history, bills, planned vs actual vs forecast balance, and the "safe to spend" verdict → views render from that single analysis object (`getA()`; call `touch()` after any state change).
+
+### PDF statement import (expense-tracker.html)
+
+`readPdfFile()` uses a self-written PDF reader (parses objects, inflates streams with `DecompressionStream`, interprets text operators incl. form XObjects) – no libraries, WinAnsi/simple fonts only, no password-protected PDFs. It produces positioned text lines; `convertPages()` picks a conversion profile in `RULES` (`sb-cheque`, `sb-card`, `generic`), and each profile proves its result against the statement's own running/closing balance. To support another bank layout, add a `parseXxx(pages)` function plus a `RULES` entry (its `how` text is shown to the user). Never commit real statements or their extracted data.

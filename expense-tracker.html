@@ -133,12 +133,15 @@ const DEFAULT_CATS=[
 {id:'shopping',name:'Shopping',kind:'expense',prio:3},
 {id:'gifts',name:'Gifts & donations',kind:'expense',prio:3},
 {id:'travel',name:'Travel & holidays',kind:'expense',prio:3},
+{id:'tax',name:'Tax',kind:'expense',prio:1},
 {id:'savings',name:'Savings & investments',kind:'expense',prio:3,saving:true}
 ];
 const SEEDS={
 salary:'salary,wages,payroll,payslip,net pay',
-transfer:'transfer to savings account,transfer,trf,own account,credit card payment,payment received,thank you,card payment,payment to card,ib payment to card,autopay',
-savings:'savings,unit trust,investment,retirement annuity,etf,tax free,tfsa,stash',
+transfer:'ib transfer,transfer to,transfer from,trf to,trf from,fund transfers,int acnt trf,own account,credit card payment,payment received,thank you,card payment,payment to card,ib payment to card',
+savings:'savings,unit trust,investment,retirement annuity,etf,tax free,tfsa',
+tax:'sars,income tax,provisional tax,tax assessed',
+otherincome:'cr interest,profit nominated,interest received,interest earned',
 groceries:'woolworths food,checkers,pick n pay,picknpay,pnp,shoprite,spar,food lover,kroger,walmart,tesco,aldi,lidl,safeway,costco,whole foods,supermarket,grocer,sainsbury,asda,woolworths',
 dining:'kfc,mcdonald,nando,steers,wimpy,debonair,burger,pizza,restaurant,cafe,coffee,starbucks,vida,uber eats,mr d,mr delivery,takeaway,sushi,pub,deli,bakery,bar and grill,spur,ocean basket,roman,taco,chicken licken',
 transport:'engen,shell,bp ,sasol,caltex,total ,fuel,petrol,diesel,uber,bolt,gautrain,taxi,parking,toll,e-toll,sanral,tyre,car wash,lyft,metro',
@@ -146,17 +149,17 @@ utilities:'eskom,city of,municipality,electricity,prepaid,water,rates,sewer,refu
 telecom:'vodacom,mtn,telkom,cell c,rain ,afrihost,vumatel,fibre,openserve,airtel,comcast,verizon,broadband,internet,cool ideas,webafrica,t-mobile,at&t',
 insurance:'discovery,outsurance,santam,old mutual,sanlam,momentum,hollard,insurance,assurance,clientele,policy,allianz,geico,medical aid,bryte,king price,budget insurance',
 housing:'rent,bond,mortgage,home loan,levy,body corporate,lease,landlord',
-subs:'netflix,spotify,showmax,dstv,apple.com/bill,itunes,google storage,youtube,microsoft,adobe,disney,prime video,icloud,dropbox,patreon,openai,subscription,audible,kindle unlimited',
+subs:'netflix,spotify,showmax,dstv,apple.com/bill,itunes,google storage,google one,google youtube,anthropic,claude,youtube,microsoft,adobe,disney,prime video,icloud,dropbox,patreon,openai,subscription,audible,kindle unlimited',
 health:'pharmacy,clicks,dis-chem,dischem,doctor,hospital,dental,dentist,optometrist,medical,physio,planet fitness,virgin active,gym,pathology,clinic',
 shopping:'takealot,amazon,mr price,h&m,zara,edgars,pep ,ackermans,truworths,game ,makro,ikea,ebay,temu,shein,superbalist,cotton on,foschini,sportscene,jet ,woolworths fashion,aliexpress',
-fees:'fee,monthly account,service fee,admin fee,sms notification,cash handling,interest charged,overdraft,bank charge,penalty,debit order unpaid',
-cash:'atm,cash withdrawal,cash wdl,cash advance',
+fees:'fee,cash withdrawal fee,atm cash fee,txn fee,fee: electricity,overdraft service fee,management fee,finance charge,monthly account,service fee,admin fee,sms notification,cash handling,interest charged,overdraft,bank charge,penalty,debit order unpaid',
+cash:'atm,autobank,cash withdrawal,cash wdl,cash advance',
 entertainment:'cinema,ster-kinekor,nu metro,movie,computicket,webtickets,steam,playstation,xbox,nintendo,casino,lotto,hollywoodbets,betway,ticket,theatre',
 household:'cleaning,hardware,builders,plumb,garden,furniture,@home,hirsch,mica,electrician,pest,appliance',
 gifts:'gift,donation,charity,church,tithe,flowers,florist',
 travel:'airline,flysafair,kulula,airbnb,booking.com,hotel,lodge,flight,avis,hertz,expedia,lufthansa,emirates',
 personal:'salon,barber,hair,beauty,spa ,nails,sorbet,hairdresser,cosmetic',
-debt:'loan,instalment,installment,wesbank,mfc,vehicle finance,payment plan,student loan,finance charge',
+debt:'loan,instalment,installment,wesbank,mfc,bmwfinance,bmw finance,vehicle finance,payment plan,student loan',
 education:'school,tuition,university,college,udemy,creche,aftercare,coursera,textbook'
 };
 const SEEDLIST=[];Object.keys(SEEDS).forEach(c=>SEEDS[c].split(',').forEach(k=>{if(k.trim()||k===' ')SEEDLIST.push([k.replace(/^\s+/,''),c])}));
@@ -164,14 +167,14 @@ SEEDLIST.sort((a,b)=>b[0].trim().length-a[0].trim().length);
 const SEEDRE=SEEDLIST.map(([k,c])=>{const t=k.trim();const e=t.replace(/[.*+?^${}()|[\]\\\/]/g,'\\$&');return [new RegExp('(^|[^a-z0-9])'+e+(t.length<=4||/ $/.test(k)?'($|[^a-z0-9])':'')),c,t.length]});
 
 function defaultState(){return{v:1,
-settings:{currency:'R',paydayDay:25,weekend:'before',buffer:500,countCard:true,cardLimit:0,histCycles:6,chequeOpening:0,cardOpeningOwed:0,balanceSet:false,salaryOverride:0,theme:'auto',lastBackup:0,names:{cheque:'Cheque account',card:'Credit card'}},
+settings:{currency:'R',paydayDay:25,weekend:'before',buffer:500,countCard:true,cardLimit:0,histCycles:6,chequeOpening:0,cardOpeningOwed:0,balanceSet:false,salaryOverride:0,theme:'auto',lastBackup:0,balSet:{cheque:false,card:false},names:{cheque:'Cheque account',card:'Credit card'}},
 categories:DEFAULT_CATS.map(c=>Object.assign({},c)),txns:[],bills:[],plan:{base:{},cycle:{}},rules:[],ignoredBills:[],meta:{created:Date.now()}}}
 
 /* ============ persistence ============ */
 const KEY='spendtruth.v1';
 const UI={tab:'dashboard',tx:{q:'',acct:'all',cat:'all',range:'cycle',limit:100,sel:{}},rev:{},aff:'',imp:[],saveErr:false};
 const FH={handle:null,ok:false};
-function migrate(){const d=defaultState();S.settings=Object.assign({},d.settings,S.settings||{});S.settings.names=Object.assign({},d.settings.names,(S.settings||{}).names||{});S.plan=S.plan||{base:{},cycle:{}};S.plan.base=S.plan.base||{};S.plan.cycle=S.plan.cycle||{};S.rules=S.rules||[];S.bills=S.bills||[];S.ignoredBills=S.ignoredBills||[];S.categories=(S.categories&&S.categories.length)?S.categories:d.categories;S.txns=S.txns||[];S.meta=S.meta||{}}
+function migrate(){const d=defaultState();S.settings=Object.assign({},d.settings,S.settings||{});S.settings.names=Object.assign({},d.settings.names,(S.settings||{}).names||{});S.plan=S.plan||{base:{},cycle:{}};S.plan.base=S.plan.base||{};S.plan.cycle=S.plan.cycle||{};S.rules=S.rules||[];S.bills=S.bills||[];S.ignoredBills=S.ignoredBills||[];S.categories=(S.categories&&S.categories.length)?S.categories:d.categories;S.txns=S.txns||[];S.meta=S.meta||{};S.settings.balSet=S.settings.balSet||{cheque:!!S.settings.balanceSet,card:!!S.settings.balanceSet};if(!S.meta.catv){S.meta.catv=2;if(!S.categories.some(c=>c.id==='tax'))S.categories.push({id:'tax',name:'Tax',kind:'expense',prio:1})}}
 function load(){try{const raw=localStorage.getItem(KEY);if(raw){S=JSON.parse(raw);migrate();return}}catch(e){console.warn(e)}S=defaultState()}
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(doSave,250)}
 function doSave(){const json=JSON.stringify(S);try{localStorage.setItem(KEY,json);UI.saveErr=false}catch(e){if(!UI.saveErr)toast('Browser storage is full or blocked – export a backup now!','bad');UI.saveErr=true}if(FH.handle&&FH.ok)writeLinked(json)}
@@ -190,9 +193,10 @@ function undo(){const j=UNDO.pop();if(!j)return;S=JSON.parse(j);migrate();rebuil
 function toast(msg,kind,undoable){const d=document.createElement('div');if(kind)d.className=kind;d.textContent=msg;if(undoable){const b=document.createElement('button');b.textContent='Undo';b.onclick=()=>{undo();d.remove()};d.appendChild(b)}$('#toast').appendChild(d);setTimeout(()=>d.remove(),undoable?9000:4500)}
 
 /* ============ text → merchant / classifier ============ */
-const NOISE=new Set('pos purchase ref reference ib eft za zar pty ltd cc the of and visa mastercard contactless tap pur debit order dr cr no nr'.split(' '));
+const NOISE=new Set('pos purchase ref reference ib eft za zar pty ltd cc the of and visa mastercard contactless tap pur debit order dr cr no nr jan feb mar apr may jun jul aug sep oct nov dec'.split(' '));
+const KEYSKIP=new Set('future dated payment transfer to from cheque card purchase account at other bank'.split(' '));
 const DC=new Map();
-function dinfo(desc){let r=DC.get(desc);if(!r){const t=String(desc).toLowerCase().replace(/[0-9]+/g,' ').replace(/[^a-z&@' ]+/g,' ').split(/\s+/).filter(w=>w.length>1&&!NOISE.has(w));r={toks:t,n:t.join(' '),key:t.slice(0,2).join(' ')||'unknown'};DC.set(desc,r);if(DC.size>50000)DC.clear()}return r}
+function dinfo(desc){let r=DC.get(desc);if(!r){const t=String(desc).toLowerCase().replace(/[0-9]+/g,' ').replace(/[^a-z&@' ]+/g,' ').split(/\s+/).filter(w=>w.length>1&&!NOISE.has(w));r={toks:t,n:t.join(' '),key:(t.filter(w=>!KEYSKIP.has(w)).slice(0,2).join(' ')||t.slice(0,2).join(' '))||'unknown'};DC.set(desc,r);if(DC.size>50000)DC.clear()}return r}
 const keyOf=t=>dinfo(t.desc).key;
 let MODEL=null;
 function rebuildModel(){const m={catN:{},tokCat:{},catTok:{},vocab:new Set(),total:0,keyCat:{}};
@@ -214,7 +218,9 @@ if(nb&&nb.conf>=.5)return nb;
 return {cat:(t.amt>0&&t.acct==='cheque')?'otherincome':'other',conf:0,src:'auto'}}
 function reclassify(){rebuildModel();let ch=0;for(const t of S.txns){if(t.src==='user'||t.src==='transfer')continue;const r=classify(t);if(t.cat!==r.cat)ch++;t.cat=r.cat;t.conf=r.conf;t.src=r.src}return ch}
 function matchTransfers(){const card=S.txns.filter(t=>t.acct==='card'&&t.amt>0&&t.src!=='user'&&t.src!=='transfer');const ch=S.txns.filter(t=>t.acct==='cheque'&&t.amt<0&&t.src!=='user'&&t.src!=='transfer');const used=new Set();let n=0;
-for(const c of card){const m=ch.find(x=>!used.has(x.id)&&Math.abs(x.amt+c.amt)<.01&&Math.abs(diffDays(x.date,c.date))<=5);if(m){used.add(m.id);c.cat=m.cat='transfer';c.src=m.src='transfer';c.conf=m.conf=1;n++}}return n}
+const pairUp=(cardList,chList)=>{for(const c of cardList){if(Math.abs(c.amt)<50)continue;const m=chList.find(x=>!used.has(x.id)&&Math.abs(x.amt+c.amt)<.01&&Math.abs(diffDays(x.date,c.date))<=5);if(m){used.add(m.id);c.cat=m.cat='transfer';c.src=m.src='transfer';c.conf=m.conf=1;n++}}};
+pairUp(card,ch);
+pairUp(S.txns.filter(t=>t.acct==='card'&&t.amt<0&&t.src!=='user'&&t.src!=='transfer'),S.txns.filter(t=>t.acct==='cheque'&&t.amt>0&&t.src!=='user'&&t.src!=='transfer'));return n}
 const needsReview=t=>t.src!=='user'&&t.src!=='transfer'&&t.conf<.65&&(S.categories.find(c=>c.id===t.cat)||{}).kind!=='transfer';
 function setCategory(ids,cat){snap();const before=S.txns.length;const set=new Set(ids);let key='';for(const t of S.txns)if(set.has(t.id)){t.cat=cat;t.src='user';t.conf=1;key=keyOf(t)}
 const ch=reclassify();const nm=(S.categories.find(c=>c.id===cat)||{}).name;touch();toast('Learned: "'+key+'" → '+nm+(ch?' · re-categorised '+ch+' similar':''),'',true)}
@@ -261,7 +267,7 @@ function detectBills(){
 const cats=Object.fromEntries(S.categories.map(c=>[c.id,c]));
 const ex=S.txns.filter(t=>t.amt<0&&!t.excl&&(cats[t.cat]||{}).kind==='expense'&&!(cats[t.cat]||{}).saving);
 if(!ex.length)return 0;
-const months=new Set(ex.map(t=>t.date.slice(0,7)));if(months.size<2)return 0;
+const months=new Set(ex.map(t=>t.date.slice(0,7)));if(months.size<2)return guessBills(ex);
 const recent=[...months].sort().slice(-8);const rset=new Set(recent);
 const g={};for(const t of ex){if(!rset.has(t.date.slice(0,7)))continue;(g[keyOf(t)]=g[keyOf(t)]||[]).push(t)}
 let added=0;
@@ -273,10 +279,16 @@ const days=firsts.map(t=>+t.date.slice(8));const md=median(days);if(days.filter(
 const catId=(function(){const c={};list.forEach(t=>c[t.cat]=(c[t.cat]||0)+1);return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]})();
 const amount=Math.round(median(amts.slice(-3)));
 const ex_=S.bills.find(b=>b.key===key);
-if(ex_){if(!ex_.edited){ex_.amount=amount;ex_.day=Math.round(md);ex_.cat=catId}}
+if(ex_){if(!ex_.edited){ex_.amount=amount;ex_.day=Math.round(md);ex_.cat=catId;ex_.guess=false}}
 else{S.bills.push({id:uid(),key,name:titleCase(key),amount,day:Math.round(md),cat:catId,active:true,auto:true,edited:false});added++}}
 return added}
 
+/* With under two months of data nothing can be proven to recur, so debit-order style payments (insurance, loans,
+   housing, phone, subscriptions) seen once are proposed as bills – flagged "seen once" so the user can confirm. */
+function guessBills(ex){const FIX=new Set(['housing','insurance','debt','telecom','subs','education']);const bk=d=>{const tk=dinfo(d).toks;let i=0;while(i<tk.length-1&&KEYSKIP.has(tk[i]))i++;return tk.slice(i,i+3).join(' ')};
+const g={};for(const t of ex){if(!FIX.has(t.cat)||-t.amt<50)continue;(g[bk(t.desc)]=g[bk(t.desc)]||[]).push(t)}let added=0;
+for(const key in g){if(!key||S.ignoredBills.includes(key)||S.bills.some(b=>b.key===key))continue;const l=g[key].sort((x,y)=>x.amt-y.amt);const big=l[0];if(l.length>1&&-l[1].amt*5>-big.amt)continue;
+S.bills.push({id:uid(),key,name:titleCase(key),amount:Math.round(-big.amt),day:+big.date.slice(8),cat:big.cat,active:true,auto:true,guess:true,edited:false});added++}return added}
 /* ============ analysis engine ============ */
 let A=null;
 const UNI=new Array(31).fill(1/31);
@@ -400,6 +412,7 @@ if(a.free<0)al.push({lvl:'bad',txt:'After bills still to pay you are '+money(-a.
 else if(a.runOut)al.push({lvl:'bad',txt:'At your usual pace your balance runs out around '+fmtDate(a.runOut)+'.'});
 else if(a.breach)al.push({lvl:'warn',txt:'At your usual pace you drop below your safety buffer around '+fmtDate(a.breach)+'.'});
 if(st.countCard&&a.bal.card>0&&a.bal.chq<a.bal.card)al.push({lvl:'warn',txt:'Your cheque balance ('+money(a.bal.chq)+') is less than the credit card balance ('+money(a.bal.card)+'). Paying the card in full would leave the cheque account negative.'});
+const ci=S.cardInfo;if(ci&&ci.rate&&a.bal.card>1000)al.push({lvl:a.bal.card>a.bal.chq?'warn':'info',txt:'Your card balance of '+money(a.bal.card)+' costs about '+money(a.bal.card*ci.rate/1200)+' a month in interest at '+ci.rate+'%'+(ci.interest?' (the last statement charged '+money(ci.interest,2)+')':'')+'. The minimum payment ('+money(ci.minDue)+(ci.due?' due '+fmtDate(ci.due):'')+') barely reduces it.'});
 if(+st.cardLimit>0&&a.bal.card/st.cardLimit>.7)al.push({lvl:'warn',txt:'Credit card utilisation is '+Math.round(a.bal.card/st.cardLimit*100)+'% of your limit.'});
 const hot=a.exps.filter(c=>!c.saving&&a.planAmt[c.id]>0&&a.spent[c.id]>50&&a.cum[c.id]>.1&&a.spent[c.id]>a.planAmt[c.id]*a.cum[c.id]*1.3).sort((x,y)=>(a.spent[y.id]-a.planAmt[y.id]*a.cum[y.id])-(a.spent[x.id]-a.planAmt[x.id]*a.cum[x.id]));
 if(hot.length)al.push({lvl:'warn',txt:hot.slice(0,3).map(c=>c.name).join(', ')+(hot.length>1?' are':' is')+' running well ahead of plan for this point in the cycle.',act:'tab:plan',lbl:'Plan'});
@@ -465,11 +478,11 @@ h+=`<div class="card hero ${a.verdict}"><div class="grid g21"><div><span class="
 <p style="margin:6px 0 0">${a.verdict==='ok'?`At your usual pace you finish the cycle about <b class="good">${money(a.cushion)}</b> above your buffer.`:a.cushion<0?`At your usual pace you finish <b class="bad">${money(-a.cushion)}</b> below your buffer${a.runOut?`, running out around <b>${fmtDate(a.runOut)}</b>`:a.breach?`, dipping under it around <b>${fmtDate(a.breach)}</b>`:''}.`:`At your usual pace you finish only <b class="warn">${money(a.cushion)}</b> above your buffer.`}
 ${Math.abs(a.endBalPlan-a.endBal)>20?` If you follow the plan instead: <b>${money(a.endBalPlan-a.buffer)}</b> ${a.endBalPlan-a.buffer>=0?'above':'below'} buffer.`:''}</p></div>
 <div><table class="eq"><tr><td>${st.countCard?esc(acctName('cheque'))+' balance less card owed':esc(acctName('cheque'))+' balance'}${a.lag>0?' (est. now)':''}</td><td class="num">${money(a.estNow)}</td></tr><tr><td>– Bills still to pay</td><td class="num">${money(a.billsAhead)}</td></tr><tr><td>– Safety buffer</td><td class="num">${money(a.buffer)}</td></tr><tr class="t"><td>= Safe to spend</td><td class="num ${free<0?'bad':''}">${money(free)}</td></tr></table>
-<p class="small mute" style="margin:8px 0 0">${a.lag>0?`Includes an estimate for ${a.lag} unrecorded day${a.lag>1?'s':''} since ${fmtDate(a.last)}. `:''}Last data: ${fmtDateY(a.last)}.</p></div></div></div>`;
+<p class="small mute" style="margin:8px 0 0">${a.lag>0?`Includes an estimate for ${a.lag} unrecorded day${a.lag>1?'s':''} since ${fmtDate(a.last)}. `:''}Last data: ${fmtDateY(a.last)}.${st.countCard&&a.bal.card>0?` Ignoring the ${money(a.bal.card)} owed on the card you would have ${money(a.free+a.bal.card)} – but the card still has to be paid.`:''}</p></div></div></div>`;
 const spentTot=sum(a.exps.map(c=>a.spent[c.id]))+sum(a.cb.filter(x=>x.status==='paid').map(x=>x.paid?-x.paid.amt:0));
 const planTot=a.billsTotal+a.varPlan+a.savePlan;
 h+=`<div class="grid g4" style="margin-bottom:14px"><div class="card kpi"><div class="l">Cheque balance</div><div class="v">${money(a.bal.chq)}</div><div class="s">as at ${fmtDate(a.last)}</div></div>
-<div class="card kpi"><div class="l">Card owed</div><div class="v">${money(a.bal.card)}</div><div class="s">${+st.cardLimit>0?Math.round(a.bal.card/st.cardLimit*100)+'% of limit':'set a limit in Settings'}</div></div>
+<div class="card kpi"><div class="l">Card owed</div><div class="v">${money(a.bal.card)}</div><div class="s">${+st.cardLimit>0?Math.round(a.bal.card/st.cardLimit*100)+'% of limit':'set a limit in Settings'}${S.cardInfo&&S.cardInfo.minDue?' · min '+money(S.cardInfo.minDue)+(S.cardInfo.due?' due '+fmtDate(S.cardInfo.due):''):''}</div></div>
 <div class="card kpi"><div class="l">Bills still to pay</div><div class="v">${money(a.billsAhead)}</div><div class="s">${a.cb.filter(x=>x.status!=='paid').length} of ${a.cb.length} this cycle</div></div>
 <div class="card kpi"><div class="l">Spent this cycle</div><div class="v">${money(spentTot)}</div><div class="s">plan ${money(planTot)} · ${a.cur.len-a.daysLeft} of ${a.L} days gone</div></div></div>`;
 h+=`<div class="card"><h2>Balance through this pay cycle</h2>${cycleChart(a)}</div>`;
@@ -513,7 +526,7 @@ function vBills(a){let h=`<h1>Bills & recurring payments</h1><div class="card"><
 <div class="row"><label class="f">Name<input id="nb-name" placeholder="e.g. Gym"></label><label class="f">Amount<input id="nb-amt" type="number" step="1" min="0"></label><label class="f">Day of month<input id="nb-day" type="number" min="1" max="31" value="1"></label><label class="f">Category<select id="nb-cat">${catOptions('housing')}</select></label><button class="btn pri" data-act="addbill">Add bill</button><button class="btn" data-act="redetect">Re-detect from history</button></div></div>`;
 const st={};if(!a.empty)a.cb.forEach(x=>st[x.b.id]=x);
 h+=`<div class="card scroll"><table><thead><tr><th>On</th><th>Name</th><th>Matches text</th><th>Category</th><th class="num">Day</th><th class="num">Amount</th><th>This cycle</th><th></th></tr></thead><tbody>`;
-for(const b of S.bills.slice().sort((x,y)=>x.day-y.day)){const x=st[b.id];h+=`<tr><td><input type="checkbox" data-chg="billf" data-id="${b.id}" data-k="active"${b.active?' checked':''}></td><td><input data-chg="billf" data-id="${b.id}" data-k="name" value="${esc(b.name)}">${b.auto&&!b.edited?' <span class="pill">auto</span>':''}</td><td><input data-chg="billf" data-id="${b.id}" data-k="key" value="${esc(b.key)}" style="width:150px"></td><td><select data-chg="billf" data-id="${b.id}" data-k="cat">${catOptions(b.cat)}</select></td><td class="num"><input type="number" min="1" max="31" data-chg="billf" data-id="${b.id}" data-k="day" value="${b.day}" style="width:64px"></td><td class="num"><input type="number" min="0" step="1" data-chg="billf" data-id="${b.id}" data-k="amount" value="${b.amount}"></td><td>${!b.active?'<span class="mute">off</span>':!x?'<span class="mute">–</span>':x.status==='paid'?'<span class="pill good">paid '+fmtDate(x.paid.date)+'</span>':x.status==='missing'?'<span class="pill warn">not seen</span>':'<span class="pill">due '+fmtDate(x.date)+'</span>'}</td><td><button class="btn sm dng" data-act="delbill" data-id="${b.id}">✕</button></td></tr>`}
+for(const b of S.bills.slice().sort((x,y)=>x.day-y.day)){const x=st[b.id];h+=`<tr><td><input type="checkbox" data-chg="billf" data-id="${b.id}" data-k="active"${b.active?' checked':''}></td><td><input data-chg="billf" data-id="${b.id}" data-k="name" value="${esc(b.name)}">${b.guess&&!b.edited?' <span class="pill warn" title="Seen once in your statements – confirm or untick">seen once</span>':b.auto&&!b.edited?' <span class="pill">auto</span>':''}</td><td><input data-chg="billf" data-id="${b.id}" data-k="key" value="${esc(b.key)}" style="width:150px"></td><td><select data-chg="billf" data-id="${b.id}" data-k="cat">${catOptions(b.cat)}</select></td><td class="num"><input type="number" min="1" max="31" data-chg="billf" data-id="${b.id}" data-k="day" value="${b.day}" style="width:64px"></td><td class="num"><input type="number" min="0" step="1" data-chg="billf" data-id="${b.id}" data-k="amount" value="${b.amount}"></td><td>${!b.active?'<span class="mute">off</span>':!x?'<span class="mute">–</span>':x.status==='paid'?'<span class="pill good">paid '+fmtDate(x.paid.date)+'</span>':x.status==='missing'?'<span class="pill warn">not seen</span>':'<span class="pill">due '+fmtDate(x.date)+'</span>'}</td><td><button class="btn sm dng" data-act="delbill" data-id="${b.id}">✕</button></td></tr>`}
 if(!S.bills.length)h+=`<tr><td colspan="8" class="mute">No bills yet. They are detected automatically after you import at least two months of history, or add one above.</td></tr>`;
 h+=`</tbody></table></div>`;if(!a.empty)h+=`<div class="card"><h2>Monthly commitments</h2><p style="margin:0">Active bills total <b>${money(sum(S.bills.filter(b=>b.active).map(b=>b.amount)))}</b> a month${a.salaryKnown?` – that is <b>${Math.round(sum(S.bills.filter(b=>b.active).map(b=>b.amount))/a.salaryKnown*100)}%</b> of your salary.`:'.'}</p></div>`;return h}
 
@@ -586,9 +599,9 @@ else{amt=c.amt>=0?parseAmt(r[c.amt]):null;if(amt!=null&&f.flip)amt=-amt}
 const desc=(c.desc>=0?(r[c.desc]||''):'').replace(/\s+/g,' ').trim();if(!date||amt==null||!desc){bad++;continue}
 out.push({acct:f.acct,date,desc,amt,bal:c.bal>=0?parseAmt(r[c.bal]):null})}return {out,bad}}
 function colSel(f,i,k,allowNone){const hd=f.hasHeader?f.rows[0]:null;const n=f.rows[0].length;return `<select data-chg="impcol" data-i="${i}" data-k="${k}">${allowNone?`<option value="-1">(none)</option>`:''}${Array.from({length:n},(_,j)=>`<option value="${j}"${f.cols[k]===j?' selected':''}>${esc(hd?hd[j]||'Column '+(j+1):'Column '+(j+1))}</option>`).join('')}</select>`}
-function vImport(a){let h=`<h1>Import statements</h1><div class="card"><div class="drop" id="drop"><p style="margin:0 0 8px"><b>Drop CSV files here</b> or</p><input type="file" id="file" accept=".csv,.txt,text/csv" multiple><p class="small mute" style="margin:10px 0 0">Export CSV from your bank's online banking (cheque account and credit card separately). Files never leave this computer. Re-importing overlapping dates is safe – duplicates are skipped.</p></div>
-<details style="margin-top:10px"><summary>…or paste CSV text</summary><textarea id="pastebox" rows="5" style="width:100%;margin-top:8px" placeholder="Date,Description,Amount"></textarea><button class="btn sm" data-act="pastecsv" style="margin-top:6px">Read pasted text</button></details></div>`;
-UI.imp.forEach((f,i)=>{const {out,bad}=impRows(f);const p=planAdd(out);const inn=sum(out.filter(x=>x.amt>0).map(x=>x.amt)),outv=-sum(out.filter(x=>x.amt<0).map(x=>x.amt));const dates=out.map(x=>x.date).sort();
+function vImport(a){let h=`<h1>Import statements</h1><div class="card"><div class="drop" id="drop"><p style="margin:0 0 8px"><b>Drop PDF or CSV statements here</b> or</p><input type="file" id="file" accept=".csv,.txt,.pdf,text/csv,application/pdf" multiple><p class="small mute" style="margin:10px 0 0">PDF statements (Standard Bank layouts built in) and CSV exports both work – cheque account and credit card separately. Files never leave this computer. Re-importing overlapping dates is safe – duplicates are skipped.</p></div>
+<details style="margin-top:10px"><summary>…or paste CSV text</summary><textarea id="pastebox" rows="5" style="width:100%;margin-top:8px" placeholder="Date,Description,Amount"></textarea><button class="btn sm" data-act="pastecsv" style="margin-top:6px">Read pasted text</button></details>${pdfRulesHtml()}</div>`;
+UI.imp.forEach((f,i)=>{if(f.kind==='pdf'){h+=vPdfCard(f,i);return}const {out,bad}=impRows(f);const p=planAdd(out);const inn=sum(out.filter(x=>x.amt>0).map(x=>x.amt)),outv=-sum(out.filter(x=>x.amt<0).map(x=>x.amt));const dates=out.map(x=>x.date).sort();
 h+=`<div class="card"><div style="display:flex;justify-content:space-between"><h2>${esc(f.name)}</h2><button class="btn sm dng" data-act="impdrop" data-i="${i}">Discard</button></div>
 <div class="row"><label class="f">This is the<select data-chg="impf" data-i="${i}" data-k="acct"><option value="cheque"${f.acct==='cheque'?' selected':''}>${esc(acctName('cheque'))}</option><option value="card"${f.acct==='card'?' selected':''}>${esc(acctName('card'))}</option></select></label>
 <label class="f">First row is a header<input type="checkbox" data-chg="impf" data-i="${i}" data-k="hasHeader"${f.hasHeader?' checked':''}></label>
@@ -600,11 +613,11 @@ ${f.cols.bal>=0&&f.acct==='cheque'?`<label class="f">Use it to set my balance<in
 <div class="scroll"><table><thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th><th>Will be filed under</th></tr></thead><tbody>${out.slice(0,6).map(x=>{const r=classify({desc:x.desc,amt:x.amt,acct:x.acct});return `<tr><td>${fmtDate(x.date)}</td><td class="desc">${esc(x.desc)}</td><td class="num ${amtCls(x.amt)}">${money(x.amt,2)}</td><td>${esc(catName(r.cat))}${r.conf<.65?' <span class="pill warn">?</span>':''}</td></tr>`}).join('')}</tbody></table></div>
 <p class="small mute">Check the preview: money you spend should show as <b>negative</b> (red-free), income as positive. Use the toggle if it is the wrong way round.</p>
 <button class="btn pri" data-act="doimport" data-i="${i}"${p.fresh.length?'':' disabled'}>Import ${p.fresh.length} new transactions</button></div>`});return h}
-function doImport(i){const f=UI.imp[i];const {out}=impRows(f);snap();if(!MODEL)rebuildModel();const r=addTxns(out);
+function doImport(i){const f=UI.imp[i];const out=f.kind==='pdf'?pdfRows(f):impRows(f).out;snap();if(!MODEL)rebuildModel();const r=addTxns(out);const pb=(f.kind==='pdf'&&f.setBal)?applyStatementBalances(f):false;
 if(f.useBal&&f.cols.bal>=0&&f.acct==='cheque'){const withBal=out.filter(x=>x.bal!=null);if(withBal.length){const maxD=withBal.reduce((m,x)=>x.date>m?x.date:m,'');const cand=withBal.filter(x=>x.date===maxD);const desc=withBal.length>1&&withBal[0].date>=withBal[withBal.length-1].date;const pick=desc?cand[0]:cand[cand.length-1];
 const upto=sum(S.txns.filter(t=>t.acct==='cheque'&&t.date<=maxD).map(t=>t.amt));S.settings.chequeOpening=Math.round((pick.bal-upto)*100)/100;S.settings.balanceSet=true}}
 reclassify();const tr=matchTransfers();reclassify();const nb=detectBills();UI.imp.splice(i,1);A=null;const rv=getA().review.length||0;touch();
-toast('Imported '+r.added+' new ('+r.dups+' duplicates skipped).'+(tr?' '+tr+' card payments matched as transfers.':'')+(nb?' '+nb+' recurring bills detected.':'')+(rv?' '+rv+' need review.':''),'',true);
+toast('Imported '+r.added+' new ('+r.dups+' duplicates skipped).'+(pb?' Balance set from the statement.':'')+(tr?' '+tr+' card payments matched as transfers.':'')+(nb?' '+nb+' recurring bills detected.':'')+(rv?' '+rv+' need review.':''),'',true);
 if(!UI.imp.length){UI.tab=rv?'transactions':'dashboard';if(rv)UI.tx.range='review';render()}}
 
 /* ============ settings ============ */
@@ -634,6 +647,184 @@ function learnedHtml(){train_();const m=MODEL;const keys=Object.keys(m.keyCat).m
 return `<p class="small">${m.total} transactions confirmed by you → ${keys.length} merchants known. ${m.total<20?'Confirm more categories to sharpen it.':''}</p>${keys.length?`<div style="max-height:180px;overflow:auto"><table><tbody>${keys.slice(0,40).map(x=>`<tr><td>${esc(titleCase(x.k))}</td><td>${esc(catName(x.best))}</td><td class="num mute small">${x.tot}×</td></tr>`).join('')}</tbody></table></div><button class="btn sm dng" style="margin-top:6px" data-act="resetlearn">Forget everything I taught it</button>`:''}`}
 function train_(){if(!MODEL)rebuildModel()}
 
+/* ============ PDF statements → transactions ============
+   1) A small built-in PDF reader (no libraries, nothing leaves this page) pulls every piece of text
+      out of the PDF together with its position on the page.
+   2) "Conversion rules" (one profile per statement layout) turn those positioned lines into transactions
+      and check the result against the statement's own running balance / closing balance. */
+function PErr(code,msg){const e=new Error(msg);e.code=code;return e}
+function bin2str(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return s}
+function str2bin(s){const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i)&255;return u}
+async function inflate(u8){if(typeof DecompressionStream==='undefined')throw PErr('nodecomp','This browser cannot unpack PDF data. Use a current Chrome, Edge or Firefox.');
+const ds=new DecompressionStream('deflate');const w=ds.writable.getWriter();w.write(u8).catch(()=>{});w.close().catch(()=>{});return new Uint8Array(await new Response(ds.readable).arrayBuffer())}
+class PName{constructor(n){this.n=n}}class PStr{constructor(v){this.v=v}}class PRef{constructor(n){this.n=n}}class PKw{constructor(k){this.k=k}}
+const PDELIM=new Set('()<>[]{}/%'.split(''));const PWS=new Set([' ','\t','\r','\n','\f','\0']);
+class PParser{constructor(s,p){this.s=s;this.p=p||0}
+skip(){const s=this.s;for(;;){const c=s[this.p];if(c===undefined)return;if(PWS.has(c))this.p++;else if(c==='%'){while(this.p<s.length&&s[this.p]!=='\n'&&s[this.p]!=='\r')this.p++}else return}}
+parse(){this.skip();const s=this.s;const c=s[this.p];if(c===undefined)return undefined;
+if(c==='/'){this.p++;let n='';while(this.p<s.length&&!PWS.has(s[this.p])&&!PDELIM.has(s[this.p]))n+=s[this.p++];return new PName(n.replace(/#([0-9a-fA-F]{2})/g,(m,h)=>String.fromCharCode(parseInt(h,16))))}
+if(c==='('){this.p++;let d=1,o='';while(this.p<s.length){const ch=s[this.p++];if(ch==='\\'){const n=s[this.p++];if(n==='n')o+='\n';else if(n==='r')o+='\r';else if(n==='t')o+='\t';else if(n==='b')o+='\b';else if(n==='f')o+='\f';else if(n>='0'&&n<='7'){let oc=n;for(let k=0;k<2&&s[this.p]>='0'&&s[this.p]<='7';k++)oc+=s[this.p++];o+=String.fromCharCode(parseInt(oc,8)&255)}else if(n==='\r'){if(s[this.p]==='\n')this.p++}else if(n==='\n'){}else o+=n}else if(ch==='('){d++;o+=ch}else if(ch===')'){if(--d===0)break;o+=ch}else o+=ch}return new PStr(o)}
+if(c==='<'){if(s[this.p+1]==='<'){this.p+=2;const d={};for(;;){this.skip();if(s[this.p]==='>'&&s[this.p+1]==='>'){this.p+=2;break}if(this.p>=s.length)break;const k=this.parse();if(!(k instanceof PName)){continue}d[k.n]=this.parse()}return d}
+const e=s.indexOf('>',this.p);const h=s.slice(this.p+1,e).replace(/\s+/g,'');this.p=e+1;let o='';for(let i=0;i<h.length;i+=2)o+=String.fromCharCode(parseInt((h.substr(i,2)+'0').slice(0,2),16));return new PStr(o)}
+if(c==='['){this.p++;const a=[];for(;;){this.skip();if(s[this.p]===']'){this.p++;break}if(this.p>=s.length)break;const v=this.parse();if(v===undefined)break;a.push(v)}return a}
+if(c===')'||c===']'||c==='>'||c==='{'||c==='}'){this.p++;return new PKw(c)}
+let t='';while(this.p<s.length&&!PWS.has(s[this.p])&&!PDELIM.has(s[this.p]))t+=s[this.p++];
+if(/^[+-]?(\d+\.?\d*|\.\d+)$/.test(t)){const num=parseFloat(t);if(/^\d+$/.test(t)){const m=/^\s+(\d+)\s+R(?![A-Za-z0-9])/.exec(s.slice(this.p,this.p+24));if(m){this.p+=m[0].length;return new PRef(+t)}}return num}
+if(t==='true')return true;if(t==='false')return false;if(t==='null')return null;return new PKw(t)}}
+const isDict=v=>v&&typeof v==='object'&&!Array.isArray(v)&&!(v instanceof PName)&&!(v instanceof PStr)&&!(v instanceof PRef)&&!(v instanceof PKw)&&!v.__stream;
+async function pdfLoad(u8){const src=bin2str(u8);if(src.slice(0,5)!=='%PDF-')throw PErr('notpdf','That file is not a PDF.');
+if(/\/Encrypt\b/.test(src))throw PErr('encrypted','This PDF is password-protected.');
+const objs={};const re=/(\d+)\s+(\d+)\s+obj\b/g;let m;
+while((m=re.exec(src))){const num=+m[1];const ps=new PParser(src,re.lastIndex);let v;try{v=ps.parse()}catch(e){continue}
+if(isDict(v)){ps.skip();if(src.startsWith('stream',ps.p)){let st=ps.p+6;if(src[st]==='\r')st++;if(src[st]==='\n')st++;let len=v.Length;if(len instanceof PRef)len=typeof objs[len.n]==='number'?objs[len.n]:null;let end=-1;if(typeof len==='number'&&src.indexOf('endstream',st+len)>=0&&src.indexOf('endstream',st+len)-(st+len)<8)end=st+len;if(end<0)end=src.indexOf('endstream',st);if(end<0)end=src.length;v={__stream:true,dict:v,raw:src.slice(st,end)};re.lastIndex=end}}
+objs[num]=v}
+const doc={objs,src};const dr=v=>{let n=0;while(v instanceof PRef&&n++<20)v=objs[v.n];return v};doc.deref=dr;
+doc.bytes=async st=>{let f=dr(st.dict.Filter);const fl=Array.isArray(f)?f.map(dr):f?[f]:[];let u=str2bin(st.raw);for(const x of fl){const n=x.n;if(n==='FlateDecode'||n==='Fl')u=await inflate(u);else throw PErr('filter','This PDF uses an unsupported compression ('+n+').')}return u};
+for(const k of Object.keys(objs)){const o=objs[k];if(o&&o.__stream&&dr(o.dict.Type)&&dr(o.dict.Type).n==='ObjStm'){try{const t=bin2str(await doc.bytes(o));const n=dr(o.dict.N),first=dr(o.dict.First);const hp=new PParser(t,0);const pairs=[];for(let i=0;i<n;i++)pairs.push([hp.parse(),hp.parse()]);for(const [on,off] of pairs){if(objs[on]===undefined)objs[on]=new PParser(t,first+off).parse()}}catch(e){}}}
+let root=null;for(const k of Object.keys(objs)){const o=objs[k];if(isDict(o)&&o.Type instanceof PName&&o.Type.n==='Catalog'){root=o}}
+if(!root)throw PErr('struct','Could not find the pages in this PDF.');
+const pages=[];const walk=(node,inh,d)=>{node=dr(node);if(!isDict(node)||d>30)return;const nh=Object.assign({},inh);for(const k of ['Resources','MediaBox','Rotate'])if(node[k]!==undefined)nh[k]=node[k];
+const t=node.Type instanceof PName?node.Type.n:'';if(t==='Pages'||node.Kids){for(const k of (dr(node.Kids)||[]))walk(k,nh,d+1)}else pages.push({dict:node,res:dr(nh.Resources)||{},box:(dr(nh.MediaBox)||[0,0,595,842]).map(x=>dr(x))})};
+walk(root.Pages,{},0);doc.pages=pages;return doc}
+const CP1252={0x80:'€',0x82:'‚',0x83:'ƒ',0x84:'„',0x85:'…',0x86:'†',0x87:'‡',0x88:'ˆ',0x89:'‰',0x8a:'Š',0x8b:'‹',0x8c:'Œ',0x8e:'Ž',0x91:'‘',0x92:'’',0x93:'“',0x94:'”',0x95:'•',0x96:'–',0x97:'—',0x98:'˜',0x99:'™',0x9a:'š',0x9b:'›',0x9c:'œ',0x9e:'ž',0x9f:'Ÿ'};
+const mmul=(m,n)=>[m[0]*n[0]+m[1]*n[2],m[0]*n[1]+m[1]*n[3],m[2]*n[0]+m[3]*n[2],m[2]*n[1]+m[3]*n[3],m[4]*n[0]+m[5]*n[2]+n[4],m[4]*n[1]+m[5]*n[3]+n[5]];
+function pdfFont(doc,fd){const dr=doc.deref;fd=dr(fd)||{};const st=dr(fd.Subtype);const f={composite:st&&st.n==='Type0',first:dr(fd.FirstChar)||0,widths:(dr(fd.Widths)||[]).map(x=>dr(x)),missing:500};
+const desc=dr(fd.FontDescriptor);if(desc&&dr(desc.MissingWidth)!=null)f.missing=dr(desc.MissingWidth);return f}
+async function pdfRun(doc,content,res,ctm0,items,depth,warn){const dr=doc.deref;const fonts={};const getFont=n=>{if(fonts[n])return fonts[n];const fr=dr(res.Font)||{};return fonts[n]=pdfFont(doc,fr[n])};
+let ctm=ctm0,tm=[1,0,0,1,0,0],tlm=[1,0,0,1,0,0],font=null,fs=0,Tc=0,Tw=0,Th=1,TL=0,rise=0;const gs=[];const stack=[];const ps=new PParser(content,0);
+const show=bytes=>{if(!font)return;if(font.composite){warn.composite=true;return}let o='';const x0=mmul([fs*Th,0,0,fs,0,rise],mmul(tm,ctm));
+for(let i=0;i<bytes.length;i++){const c=bytes.charCodeAt(i)&255;o+=CP1252[c]||String.fromCharCode(c);const w=font.widths[c-font.first];const w0=(w==null||isNaN(w)?font.missing:w)/1000;tm=mmul([1,0,0,1,(w0*fs+Tc+(c===32?Tw:0))*Th,0],tm)}
+const x1=mmul([fs*Th,0,0,fs,0,rise],mmul(tm,ctm));items.push({str:o,x:x0[4],x2:x1[4],y:x0[5],size:Math.abs(x0[3])||Math.abs(fs)})};
+const td=(tx,ty)=>{tlm=mmul([1,0,0,1,tx,ty],tlm);tm=tlm.slice()};
+for(;;){const v=ps.parse();if(v===undefined)break;if(!(v instanceof PKw)){stack.push(v);if(stack.length>200)stack.shift();continue}
+const op=v.k,a=stack;const n=i=>(typeof a[i]==='number'?a[i]:0);
+switch(op){case 'q':gs.push({ctm,font,fs,Tc,Tw,Th,TL,rise});break;
+case 'Q':{const g=gs.pop();if(g){ctm=g.ctm;font=g.font;fs=g.fs;Tc=g.Tc;Tw=g.Tw;Th=g.Th;TL=g.TL;rise=g.rise}break}
+case 'cm':ctm=mmul([n(0),n(1),n(2),n(3),n(4),n(5)],ctm);break;
+case 'BT':tm=[1,0,0,1,0,0];tlm=tm.slice();break;
+case 'Tf':if(a[0] instanceof PName)font=getFont(a[0].n);fs=n(1);break;
+case 'Tm':tm=[n(0),n(1),n(2),n(3),n(4),n(5)];tlm=tm.slice();break;
+case 'Td':td(n(0),n(1));break;case 'TD':TL=-n(1);td(n(0),n(1));break;case 'T*':td(0,-TL);break;
+case 'TL':TL=n(0);break;case 'Tc':Tc=n(0);break;case 'Tw':Tw=n(0);break;case 'Tz':Th=n(0)/100;break;case 'Ts':rise=n(0);break;
+case 'Tj':if(a[0] instanceof PStr)show(a[0].v);break;
+case "'":td(0,-TL);if(a[0] instanceof PStr)show(a[0].v);break;
+case '"':Tw=n(0);Tc=n(1);td(0,-TL);if(a[2] instanceof PStr)show(a[2].v);break;
+case 'TJ':if(Array.isArray(a[0]))for(const e of a[0]){if(e instanceof PStr)show(e.v);else if(typeof e==='number')tm=mmul([1,0,0,1,-e/1000*fs*Th,0],tm)}break;
+case 'BI':{const e=ps.s.indexOf('EI',ps.p);ps.p=e<0?ps.s.length:e+2;break}
+case 'Do':if(a[0] instanceof PName&&depth<6){const xo=dr((dr(res.XObject)||{})[a[0].n]);if(xo&&xo.__stream){const sub=dr(xo.dict.Subtype);if(sub&&sub.n==='Form'){const mat=(dr(xo.dict.Matrix)||[1,0,0,1,0,0]).map(x=>dr(x));const r2=dr(xo.dict.Resources)||res;await pdfRun(doc,bin2str(await doc.bytes(xo)),r2,mmul(mat,ctm),items,depth+1,warn)}}}break}
+stack.length=0}}
+async function pdfPageLines(doc,page){const dr=doc.deref;let c=dr(page.dict.Contents);const list=Array.isArray(c)?c.map(dr):[c];let content='';for(const st of list)if(st&&st.__stream)content+=bin2str(await doc.bytes(st))+'\n';
+const items=[],warn={};await pdfRun(doc,content,page.res,[1,0,0,1,0,0],items,0,warn);if(warn.composite&&!items.length)throw PErr('font','This PDF stores its text in a font format I cannot read.');
+const its=items.filter(i=>i.str.trim()!=='');its.sort((a,b)=>b.y-a.y||a.x-b.x);const lines=[];
+for(const it of its){const L=lines.find(l=>Math.abs(l.y-it.y)<=2.2);if(L)L.items.push(it);else lines.push({y:it.y,items:[it]})}
+lines.sort((a,b)=>b.y-a.y);
+for(const L of lines){L.items.sort((a,b)=>a.x-b.x);const cells=[];for(const it of L.items){const p=cells[cells.length-1];if(p&&it.x-p.x2<it.size*.45){p.t+=(it.x-p.x2>it.size*.1?' ':'')+it.str;p.x2=it.x2}else cells.push({x:it.x,x2:it.x2,t:it.str,size:it.size})}
+cells.forEach(c=>c.t=c.t.replace(/\s+/g,' ').trim());L.cells=cells.filter(c=>c.t)}
+return {width:page.box[2]-page.box[0],height:page.box[3]-page.box[1],lines:lines.filter(l=>l.cells.length)}}
+
+/* ---------- conversion rules ---------- */
+const lt=l=>l.cells.map(c=>c.t).join('  ');
+const MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+const r2=x=>Math.round(x*100)/100;
+const NUM_SB=/^\d{1,3}(?:,\d{3})*\.\d{2}-?$/;
+const pnum=t=>{const neg=/-/.test(t);const v=parseFloat(t.replace(/[^0-9.]/g,''));return neg?-v:v};
+function longDate(d,mo,y){const m=MONTHS[String(mo).slice(0,3).toLowerCase()];if(!m)return null;return mk(+y,m,+d)}
+function cleanDesc(s){return s.replace(/\b\d{4}\*{1,2}\d{4}\b/g,' ').replace(/\b\d{4}-\d{2}-\d{2}T[\d:]+\s*\d*/g,' ').replace(/\s\d{1,2}\s(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/gi,' ').replace(/\s+/g,' ').trim()}
+const RULES={
+'sb-cheque':{name:'Standard Bank – current / cheque account statement',acct:'cheque',
+ how:['Table starts under the header row "Details · Service Fee · Debits · Credits · Date · Balance" and stops at the "##" VAT note / Limit Structure.','A row is a line that has a Date (printed month then day, e.g. "10 01" = 1 Oct) and a running Balance. Year comes from "Statement from … to …".','Description = the text in the Details column on that line plus any following lines that have no date or balance. The "##" service-fee marker is ignored (fees are their own rows).','Amount sign: a trailing "-" means money out; no sign means money in. Every row is then proved against the running balance: previous balance + amount must equal the new balance.','"Balance brought forward" rows are not transactions; they start the balance chain, and the statement\'s last balance becomes your cheque balance (optional).','Card numbers, "DD MON" purchase dates and ATM time-stamps are stripped from descriptions so the same merchant looks the same every month.']},
+'sb-card':{name:'Standard Bank – credit card statement',acct:'card',
+ how:['Transaction pages are two side-by-side columns (Date · Description · Amount); each column is read top to bottom, left column first.','Rows start with a date like "5 Oct 26"; the last number on the row is the amount. Rows are only read after a "Credits" or "Debit" heading.','Statement shows purchases as positive and payments/credits as negative, so the sign is reversed: purchases become money out, payments become money in. Interest and fees (e.g. "Cash Finance Charge") are purchases.','Proof: brought-forward balance + all printed amounts must equal the closing balance on page 1.','Page 1 summary supplies closing balance (amount owed), credit limit, minimum payment, due date and interest rate.','Balance brought forward and closing balance lines are not transactions.']},
+'generic':{name:'Generic statement (best guess)',acct:'cheque',
+ how:['Any line that starts with a recognisable date and ends with a number is treated as a transaction; the text in between is the description.','Minus signs, brackets, "DR" or a trailing "-" mean money out; "CR" means money in. With no marker I assume money out – use the "flip signs" switch if the preview is back to front.','If a second number sits on the row I treat it as a running balance and use it to prove the signs.','This is less reliable than the bank-specific rules – always check the preview totals.']}};
+function stmtCheckLine(ok,text){return {ok,text}}
+function parseSbCheque(pages){const all=pages.map(p=>p.lines.map(lt).join('\n')).join('\n');
+const pm=all.match(/Statement from (\d{1,2}) ([A-Za-z]+) (\d{4}) to (\d{1,2}) ([A-Za-z]+) (\d{4})/);if(!pm)return null;
+const ps=longDate(pm[1],pm[2],pm[3]),pe=longDate(pm[4],pm[5],pm[6]);const am=all.match(/Account Number\s+([\d ]+)/);const digits=am?am[1].replace(/\D/g,''):'';
+const yearFor=(mo,d)=>{for(const y of [+pe.slice(0,4),+ps.slice(0,4)]){const s=mk(y,mo,d);if(s&&s>=addDays(ps,-1)&&s<=addDays(pe,1))return s}return mk(+pe.slice(0,4),mo,d)};
+const txns=[],warnings=[];let prev=null,opening=null,bad=0,ok=0,cont=0;
+for(const pg of pages){let hdr=null,cur=null,inT=false;
+for(const ln of pg.lines){const t=lt(ln);const cs=ln.cells;
+if(cs.some(c=>c.t==='Details')&&cs.some(c=>c.t==='Balance')&&cs.some(c=>c.t==='Date')){const g=n=>cs.find(c=>c.t===n);hdr={svc:(cs.find(c=>/^Service/.test(c.t))||g('Debits')||{x:200}).x,date:g('Date').x};inT=true;cur=null;continue}
+if(!inT)continue;
+if(/^##/.test(t)||/Limit Structure|Please verify all transactions/.test(t)){inT=false;cur=null;continue}
+const dateCells=cs.filter(c=>c.x>=hdr.date-8&&c.x2<=hdr.date+42&&/^\d{2}( \d{2})?$/.test(c.t));const nums=cs.filter(c=>NUM_SB.test(c.t));
+const balCell=nums.filter(c=>c.x>hdr.date).sort((a,b)=>b.x2-a.x2)[0];const amtCell=nums.filter(c=>c.x2<=hdr.date+2)[0];
+const desc=cs.filter(c=>c.x<hdr.svc-3&&!NUM_SB.test(c.t)).map(c=>c.t).join(' ');
+if(balCell&&(dateCells.length||/^BALANCE (BROUGHT|CARRIED) FORWARD/.test(desc))){
+ const bal=pnum(balCell.t);
+ if(/^BALANCE (BROUGHT|CARRIED) FORWARD/.test(desc)){if(opening===null){opening=bal}else if(prev!==null&&Math.abs(prev-bal)>.005)warnings.push('Balance brought forward ('+money(bal,2)+') does not match the previous page ('+money(prev,2)+') – a page may be missing.');prev=bal;cur=null;continue}
+ const dd=dateCells.map(c=>c.t).join(' ').match(/(\d{2})\D*(\d{2})/);if(!dd||!amtCell){cur=null;continue}
+ let amt=pnum(amtCell.t);if(!/-$/.test(amtCell.t))amt=Math.abs(amt);else amt=-Math.abs(amt);
+ if(prev!==null){const d=r2(bal-prev);if(Math.abs(d-amt)<.006)ok++;else if(Math.abs(d+amt)<.006){amt=-amt;ok++}else bad++}
+ prev=bal;cur={date:yearFor(+dd[1],+dd[2]),desc,amt,bal};txns.push(cur);continue}
+if(cur&&!dateCells.length&&!balCell&&!nums.length&&desc){cur.desc+=' '+desc;cont++}}}
+txns.forEach(x=>x.desc=cleanDesc(x.desc));
+const chk=[];if(!txns.length)return null;
+chk.push(stmtCheckLine(bad===0&&opening!==null,bad===0?(ok+' of '+txns.length+' rows reconcile to the statement\'s running balance'+(opening!==null?' (starting from '+money(opening,2)+').':'.')):bad+' row(s) do not match the running balance – check the preview carefully.'));
+const stated=all.match(/Balance at date of statement\s+(-?[\d,]+\.\d{2}-?)/);const closing=txns.length?txns[txns.length-1].bal:null;
+if(stated&&closing!==null){const sv=pnum(stated[1]);chk.push(stmtCheckLine(Math.abs(sv-closing)<.006,'Last running balance '+money(closing,2)+(Math.abs(sv-closing)<.006?' matches':' does NOT match')+' the "Balance at date of statement" ('+money(sv,2)+').'))}
+const lastDate=txns.reduce((m,x)=>x.date>m?x.date:m,pe);
+return {profile:'sb-cheque',acct:'cheque',label:'Standard Bank cheque account …'+digits.slice(-4),periodStart:ps,periodEnd:pe,txns:txns.map(x=>({date:x.date,desc:x.desc,amt:x.amt})),checks:chk,warnings,balances:{date:pe>lastDate?pe:lastDate,closing},info:{}}}
+function parseSbCard(pages){const L=pages.flatMap(p=>p.lines.map(lt));const all=L.join('\n');if(!/Transaction details/.test(all))return null;
+const num=re=>{const m=all.match(re);return m?parseFloat(m[1].replace(/,/g,'')):null};
+const pm=all.match(/Statement \/ Invoice Period\s+(\d{1,2}) ([A-Za-z]{3}) (\d{2}) to (\d{1,2}) ([A-Za-z]{3}) (\d{2})/);const ps=pm?longDate(pm[1],pm[2],2000+ +pm[3]):null,pe=pm?longDate(pm[4],pm[5],2000+ +pm[6]):null;
+const bbf=num(/Balance brought forward\s+(-?[\d,]+\.\d{2})/i),closing=num(/Closing balance\s+(-?[\d,]+\.\d{2})/i);
+const am=all.match(/Account\s+(\d{4})\s*\*+\s*\*+\s*(\d{4})/);const dueM=all.match(/Payment due date\s+(\d{1,2}) ([A-Za-z]{3}) (\d{2})/);
+const info={limit:num(/Credit limit\s+([\d,]+\.\d{2})/),available:num(/Available money to spend\s+([\d,]+\.\d{2})/),minDue:num(/Minimum payment due\s+([\d,]+\.\d{2})/),interest:num(/Interest charged\s+([\d,]+\.\d{2})/),rate:num(/Debit\s+(\d+\.\d+)%/),due:dueM?longDate(dueM[1],dueM[2],2000+ +dueM[3]):null,closing};
+const txns=[];let sumVals=0,secWarn=0;
+for(const pg of pages){const mid=pg.width/2;for(const side of [0,1]){let started=false,sec=null;
+for(const ln of pg.lines){const cs=ln.cells.filter(c=>side?c.x>=mid:c.x<mid);if(!cs.length)continue;const t=cs.map(c=>c.t).join(' ');
+if(cs.length===1&&/^(Credits|Debit)$/.test(cs[0].t)){started=true;sec=cs[0].t;continue}
+if(!started)continue;
+const d=cs[0].t.match(/^(\d{1,2}) ([A-Za-z]{3}) (\d{2})$/);const last=cs[cs.length-1];
+if(!d||cs.length<3||!/^-?\d{1,3}(?:,\d{3})*\.\d{2}(?: ?Cr)?$/.test(last.t))continue;
+const desc=cs.slice(1,-1).map(c=>c.t).join(' ');if(/^Balance Brought Forward/i.test(desc))continue;
+const val=parseFloat(last.t.replace(/[^0-9.-]/g,''));const date=longDate(d[1],d[2],2000+ +d[3]);if(!date)continue;
+if((sec==='Credits'&&val>0)||(sec==='Debit'&&val<0))secWarn++;
+sumVals+=val;txns.push({date,desc:cleanDesc(desc),amt:r2(-val)})}}}
+if(!txns.length)return null;
+const chk=[];if(bbf!=null&&closing!=null){const ok=Math.abs(bbf+sumVals-closing)<.006;chk.push(stmtCheckLine(ok,ok?'Brought-forward '+money(bbf,2)+' + the '+txns.length+' rows = closing balance '+money(closing,2)+' ✓':'Rows do not add up to the closing balance (off by '+money(closing-bbf-sumVals,2)+') – a row may have been missed.'))}
+else chk.push(stmtCheckLine(false,'Could not find the opening/closing balance to check against.'));
+if(secWarn)chk.push(stmtCheckLine(false,secWarn+' row(s) have a sign that disagrees with their Credits/Debit heading.'));
+return {profile:'sb-card',acct:'card',label:'Standard Bank credit card …'+(am?am[2]:''),periodStart:ps,periodEnd:pe,txns,checks:chk,warnings:[],balances:{date:pe||txns.reduce((m,x)=>x.date>m?x.date:m,''),owed:closing},info}}
+function parseGeneric(pages){const txns=[];let withBal=0,okBal=0,prev=null,signSeen=false;
+for(const pg of pages)for(const ln of pg.lines){const cs=ln.cells;if(cs.length<3)continue;const date=parseDate(cs[0].t,'dmy');if(!date)continue;
+const nums=[];for(let i=cs.length-1;i>0&&nums.length<2;i--){if(/^[(\-]?[A-Za-z$€£R]{0,2}\s?[\d,]+\.\d{2}\)?-?(\s?(CR|DR|Cr|Dr))?$/.test(cs[i].t))nums.unshift(i);else break}
+if(!nums.length)continue;const ai=nums.length===2?nums[0]:nums[0];const aT=cs[ai].t;let v=Math.abs(parseAmt(aT));let neg=/^\(|-|DR|Dr/.test(aT.replace(/^[^\d(]*/,m=>m));if(/CR|Cr/.test(aT))neg=false;if(/^\(|-|\bDR\b|\bDr\b/.test(aT)||/CR|Cr/.test(aT))signSeen=true;
+const desc=cs.slice(1,ai).map(c=>c.t).join(' ');if(!desc||/balance/i.test(desc))continue;let amt=neg?-v:-v;if(/CR|Cr/.test(aT))amt=v;
+if(nums.length===2){const b=parseAmt(cs[nums[1]].t);if(prev!=null){withBal++;if(Math.abs(r2(b-prev)-amt)<.006)okBal++;else if(Math.abs(r2(b-prev)+amt)<.006){amt=-amt;okBal++}}prev=b}
+txns.push({date,desc:cleanDesc(desc),amt:r2(amt)})}
+if(!txns.length)return null;const ds=txns.map(t=>t.date).sort();const chk=[];
+if(withBal)chk.push(stmtCheckLine(okBal===withBal,okBal+' of '+withBal+' rows reconcile to a running balance.'));else chk.push(stmtCheckLine(false,'No running balance found, so signs could not be proved – check totals below.'));
+return {profile:'generic',acct:'cheque',label:'Unrecognised statement layout',periodStart:ds[0],periodEnd:ds[ds.length-1],txns,checks:chk,warnings:['Generic rules were used – this layout is not one of the built-in bank profiles.'],balances:null,info:{}}}
+function convertPages(pages){const all=pages.map(p=>p.lines.map(lt).join('\n')).join('\n');
+if(/BANK STATEMENT \/ TAX INVOICE/.test(all)&&/Details/.test(all)&&/Debits/.test(all)){const r=parseSbCheque(pages);if(r)return r}
+if(/Statement\s?\/\s?Tax Invoice/.test(all)&&/Transaction details/.test(all)){const r=parseSbCard(pages);if(r)return r}
+return parseGeneric(pages)}
+async function readPdfFile(file){const u8=new Uint8Array(await file.arrayBuffer());const doc=await pdfLoad(u8);if(!doc.pages.length)throw PErr('struct','This PDF has no pages.');const pages=[];for(const p of doc.pages)pages.push(await pdfPageLines(doc,p));
+const res=convertPages(pages);if(!res)throw PErr('none','I could not find any transactions in this PDF. If it is a scanned image, export CSV from your bank instead.');res.pageCount=pages.length;return res}
+async function addPdfFile(file){try{const res=await readPdfFile(file);UI.imp.push({kind:'pdf',name:file.name,res,acct:res.acct,flip:false,setBal:true})}
+catch(e){toast(e.code==='encrypted'?'"'+file.name+'" is password-protected. Open it in a PDF viewer, then Print → Save as PDF (no password) and import that copy.':'Could not read "'+file.name+'": '+e.message,'bad')}}
+function pdfRows(f){return f.res.txns.map(t=>({acct:f.acct,date:t.date,desc:t.desc,amt:f.flip?-t.amt:t.amt}))}
+function vPdfCard(f,i){const r=f.res;const rows=pdfRows(f);const p=planAdd(rows);const inn=sum(rows.filter(x=>x.amt>0).map(x=>x.amt)),out=-sum(rows.filter(x=>x.amt<0).map(x=>x.amt));
+const b=r.balances,info=r.info||{};const canBal=b&&f.acct===r.acct&&((r.acct==='cheque'&&b.closing!=null)||(r.acct==='card'&&b.owed!=null));
+return `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px"><h2>${esc(f.name)} <span class="pill">PDF</span></h2><button class="btn sm dng" data-act="impdrop" data-i="${i}">Discard</button></div>
+<p style="margin:0 0 6px"><b>${esc(r.label)}</b> · ${fmtDateY(r.periodStart)} – ${fmtDateY(r.periodEnd)} · ${r.pageCount} page${r.pageCount>1?'s':''} · rules: <i>${esc(RULES[r.profile].name)}</i></p>
+${r.checks.map(c=>`<div class="alert ${c.ok?'info':'warn'}" style="margin-bottom:4px">${c.ok?'✓':'⚠'} ${esc(c.text)}</div>`).join('')}${r.warnings.map(w=>`<div class="alert warn" style="margin-bottom:4px">⚠ ${esc(w)}</div>`).join('')}
+<div class="row" style="margin:8px 0"><label class="f">This is the<select data-chg="impf" data-i="${i}" data-k="acct"><option value="cheque"${f.acct==='cheque'?' selected':''}>${esc(acctName('cheque'))}</option><option value="card"${f.acct==='card'?' selected':''}>${esc(acctName('card'))}</option></select></label>
+<label class="f">Money in / out is back to front<input type="checkbox" data-chg="impf" data-i="${i}" data-k="flip"${f.flip?' checked':''}></label>
+${canBal?`<label class="f">${r.acct==='cheque'?'Set my cheque balance to '+money(b.closing,2):'Set my card owed to '+money(b.owed,2)}<input type="checkbox" data-chg="impf" data-i="${i}" data-k="setBal"${f.setBal?' checked':''}></label>`:''}</div>
+${r.profile==='sb-card'&&info.limit?`<p class="small mute" style="margin:0 0 6px">Credit limit ${money(info.limit)} · minimum payment ${money(info.minDue||0,2)} due ${info.due?fmtDate(info.due):'?'} · interest ${info.rate||'?'}% · interest charged this statement ${money(info.interest||0,2)}. These are saved so the dashboard can warn you about card debt.</p>`:''}
+<p class="small" style="margin:0 0 6px"><b>${rows.length}</b> transactions · <b class="good">${p.fresh.length} new</b>, ${p.dups} already imported · in ${money(inn)} / out ${money(out)}</p>
+<details><summary>Show all ${rows.length} transactions</summary><div class="scroll" style="max-height:320px;overflow:auto"><table><thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th><th>Filed under</th></tr></thead><tbody>${rows.map(x=>{const c=classify({desc:x.desc,amt:x.amt,acct:x.acct});return `<tr><td>${fmtDate(x.date)}</td><td class="desc" title="${esc(x.desc)}">${esc(x.desc)}</td><td class="num ${amtCls(x.amt)}">${money(x.amt,2)}</td><td>${esc(catName(c.cat))}${c.conf<.65?' <span class="pill warn">?</span>':''}</td></tr>`}).join('')}</tbody></table></div></details>
+<div style="margin-top:10px"><button class="btn pri" data-act="doimport" data-i="${i}"${p.fresh.length||canBal&&f.setBal?'':' disabled'}>Import ${p.fresh.length} new transactions</button></div></div>`}
+function pdfRulesHtml(){return `<details style="margin-top:10px"><summary>How PDF statements are converted (the built-in rules)</summary>${Object.keys(RULES).map(k=>`<h3>${esc(RULES[k].name)}</h3><ul class="small" style="margin:4px 0 0;padding-left:18px">${RULES[k].how.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`).join('')}<p class="small mute">Every PDF is read entirely inside this page – the file is never uploaded. Password-protected PDFs must be saved without a password first.</p></details>`}
+function applyStatementBalances(f){const r=f.res,b=r.balances;if(!b||f.acct!==r.acct)return false;const st=S.settings;st.balSet=st.balSet||{cheque:false,card:false};
+if(r.acct==='cheque'&&b.closing!=null){const upto=sum(S.txns.filter(t=>t.acct==='cheque'&&t.date<=b.date).map(t=>t.amt));st.chequeOpening=r2(b.closing-upto);st.balSet.cheque=true}
+else if(r.acct==='card'&&b.owed!=null){const upto=sum(S.txns.filter(t=>t.acct==='card'&&t.date<=b.date).map(t=>t.amt));st.cardOpeningOwed=r2(b.owed+upto);st.balSet.card=true;const i=r.info||{};if(i.limit)st.cardLimit=i.limit;S.cardInfo={limit:i.limit||0,minDue:i.minDue||0,due:i.due||null,rate:i.rate||0,interest:i.interest||0,closing:b.owed,asAt:b.date}}
+else return false;st.balanceSet=!!st.balSet.cheque&&(!!st.balSet.card||!S.txns.some(t=>t.acct==='card'));return true}
+
 /* ============ shell, events ============ */
 function header(a){const tabs=[['dashboard','Dashboard'],['plan','Plan'],['transactions','Transactions'],['bills','Bills'],['insights','Insights'],['import','Import'],['settings','Settings & data']];
 return `<header class="top"><div class="brand">Spend<span>Truth</span></div><nav>${tabs.map(t=>`<button data-act="tab" data-v="${t[0]}" class="${UI.tab===t[0]?'on':''}">${t[1]}${t[0]==='transactions'&&a.review&&a.review.length?`<span class="badge">${a.review.length}</span>`:''}</button>`).join('')}</nav><div class="asof">${a.empty?'No data yet':'Data through '+fmtDateY(a.last)+' · stays on this PC'}</div></header>`}
@@ -642,7 +833,7 @@ function render(){const y=window.scrollY;document.documentElement.dataset.theme=
 function updTx(){const el=$('#txlist');if(el)el.innerHTML=txRows(getA())}
 function openModal(html){const m=$('#modal');m.innerHTML=html;if(!m.open)m.showModal()}
 function closeModal(){const m=$('#modal');if(m.open)m.close()}
-async function handleFiles(files){for(const f of files){try{addImportFile(f.name,await f.text())}catch(e){toast('Could not read '+f.name,'bad')}}UI.tab='import';render()}
+async function handleFiles(files){for(const f of files){try{if(/\.pdf$/i.test(f.name)||f.type==='application/pdf')await addPdfFile(f);else addImportFile(f.name,await f.text())}catch(e){toast('Could not read '+f.name,'bad')}}UI.tab='import';render()}
 
 const ACT={
 tab(el){UI.tab=el.dataset.v;render();window.scrollTo(0,0)},
@@ -652,7 +843,7 @@ allalerts(){openModal('<h2>All notices</h2>'+alertsHtml(getA())+'<div class="row
 closemodal(){closeModal()},
 setbal(){const a=getA();const chq=parseFloat($('#b-chq').value),card=parseFloat($('#b-card').value);if(isNaN(chq)||isNaN(card)){toast('Enter both numbers','bad');return}
 const sc=sum(S.txns.filter(t=>t.acct==='cheque').map(t=>t.amt)),sk=sum(S.txns.filter(t=>t.acct==='card').map(t=>t.amt));
-S.settings.chequeOpening=Math.round((chq-sc)*100)/100;S.settings.cardOpeningOwed=Math.round((card+sk)*100)/100;S.settings.balanceSet=true;touch();toast('Balances saved')},
+S.settings.chequeOpening=Math.round((chq-sc)*100)/100;S.settings.cardOpeningOwed=Math.round((card+sk)*100)/100;S.settings.balanceSet=true;S.settings.balSet={cheque:true,card:true};touch();toast('Balances saved')},
 demo(){if(S.txns.length&&!confirm('Replace your current data with demo data?'))return;snap();makeDemo();UI.tab='dashboard';touch();window.scrollTo(0,0);toast('Demo data loaded – 6 months of invented transactions.')},
 wipe(){if(!confirm('Erase ALL transactions, plans and settings stored in this browser? Download a backup first if unsure.'))return;if(!confirm('This cannot be undone. Erase everything?'))return;S=defaultState();UNDO=[];rebuildModel();UI.imp=[];UI.tab='dashboard';touch()},
 exportjson(){download('spend-truth-backup-'+todayStr()+'.json',JSON.stringify(S));S.settings.lastBackup=Date.now();save();render();toast('Backup downloaded – keep it somewhere safe.')},
@@ -702,7 +893,7 @@ prio(el){const c=S.categories.find(x=>x.id===el.dataset.c);c.prio=+el.value;touc
 planbase(el){if(el.value==='')delete S.plan.base[el.dataset.c];else S.plan.base[el.dataset.c]=Math.max(0,parseFloat(el.value)||0);touch()},
 plancycle(el){const a=getA();const cy=S.plan.cycle[a.cur.start]=S.plan.cycle[a.cur.start]||{};if(el.value==='')delete cy[el.dataset.c];else cy[el.dataset.c]=Math.max(0,parseFloat(el.value)||0);touch()},
 billf(el){const b=S.bills.find(x=>x.id===el.dataset.id),k=el.dataset.k;if(!b)return;
-if(k==='active')b.active=el.checked;else if(k==='day')b.day=clamp(parseInt(el.value)||1,1,31);else if(k==='amount')b.amount=Math.max(0,parseFloat(el.value)||0);else if(k==='key')b.key=dinfo(el.value).n;else b[k]=el.value;b.edited=true;touch()},
+if(k==='active')b.active=el.checked;else if(k==='day')b.day=clamp(parseInt(el.value)||1,1,31);else if(k==='amount')b.amount=Math.max(0,parseFloat(el.value)||0);else if(k==='key')b.key=dinfo(el.value).n;else b[k]=el.value;b.edited=true;b.guess=false;touch()},
 catname(el){const c=S.categories.find(x=>x.id===el.dataset.id);if(c&&el.value.trim()){c.name=el.value.trim();touch()}}
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el)return;if(el.tagName==='A')e.preventDefault();const f=ACT[el.dataset.act];if(f)f(el,e)});
@@ -718,7 +909,7 @@ window.addEventListener('drop',e=>{if(e.dataTransfer&&e.dataTransfer.files&&e.da
 
 /* ============ demo data ============ */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-function makeDemo(){const keep=S.settings;S=defaultState();S.settings=Object.assign(S.settings,{paydayDay:25,cardLimit:25000,buffer:1000,balanceSet:true,theme:keep.theme||'auto'});
+function makeDemo(){const keep=S.settings;S=defaultState();S.settings=Object.assign(S.settings,{paydayDay:25,cardLimit:25000,buffer:1000,balanceSet:true,balSet:{cheque:true,card:true},theme:keep.theme||'auto'});
 const rnd=mulberry32(11),T=TODAY();let s=cycleOf(T).start;for(let i=0;i<6;i++)s=cycleOf(addDays(s,-1)).start;const end=addDays(T,-1);
 const tx=[];let owed=0;const R=(a,b)=>Math.round(a+rnd()*(b-a));const pick=a=>a[Math.floor(rnd()*a.length)];
 const add=(acct,date,desc,amt)=>{tx.push({id:uid(),acct,date,desc,amt:Math.round(amt*100)/100,cat:'other',src:'auto',conf:0,excl:false});if(acct==='card')owed-=amt};
@@ -745,7 +936,7 @@ S.txns=tx;S.settings.chequeOpening=2000;S.settings.cardOpeningOwed=0;
 rebuildModel();reclassify();matchTransfers();reclassify();detectBills();A=null}
 
 /* ============ boot ============ */
-load();rebuildModel();window.__st={S:()=>S,A:getA,cycleOf,makeDemo,render};
+load();rebuildModel();window.__st={S:()=>S,A:getA,UI:()=>UI,cycleOf,makeDemo,render};
 render();restoreLink();
 })();
 </script>
