@@ -23,3 +23,9 @@ Streamlit re-executes the whole script on every interaction, so the file reads t
 6. **Rendering** (`app.py:75-111`): a Plotly figure (planned dotted line, actual line, safety-buffer hline) followed by metrics. "Under/Over Budget" compares the last actual point to the planned value for today.
 
 Note: the planned path is clamped at 0 but the actual path is not, so the two can diverge once the balance goes negative.
+
+## expense-tracker.html
+
+A separate, fully offline single-file app (no Streamlit, no network; a CSP blocks all requests). Vanilla JS in one `<script>`, state persisted to `localStorage` (key `spendtruth.v1`) plus optional linked file / JSON backup. Open it directly in a browser; add `?today=YYYY-MM-DD` to fake the date when testing.
+
+Flow: CSV import → `classify()` (user rules → learned merchant key → naive Bayes on user-confirmed txns → built-in keyword seeds) → `analyse()` builds pay-cycle (payday-to-payday) history, bills, planned vs actual vs forecast balance, and the "safe to spend" verdict → views render from that single analysis object (`getA()`; call `touch()` after any state change).
